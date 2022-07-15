@@ -2,18 +2,22 @@ import os
 import pprint
 import click
 import pickle
+import requests.exceptions
 from youtube import create_youtube_client
+from spotify import create_spotify_client
 from time import time
 
 
 def get_youtube_playlist_items(secrets_file, playlist_id):
-    if os.path.exists("./.cache/youtubeapiclient.pkl"):
-        with open("./.cache/youtubeapiclient.pkl", "rb") as inp:
+    if os.path.exists("./youtubeapiclient.pkl"):
+        with open("./youtubeapiclient.pkl", "rb") as inp:
             obj = pickle.load(inp)
             if obj.timestamp + 518400 > time():
                 youtube = obj
-            else: youtube = create_youtube_client(secrets_file)
-    else: youtube = create_youtube_client(secrets_file)
+            else:
+                youtube = create_youtube_client.create_youtube_client(secrets_file)
+    else:
+        youtube = create_youtube_client.create_youtube_client(secrets_file)
 
     response = youtube.playlistItems().list(
         part="snippet,contentDetails",
@@ -36,8 +40,17 @@ def get_youtube_playlist_items(secrets_file, playlist_id):
 
 @click.command()
 @click.option('--secret-file', default="client_secret.json", help="Path to GoogleAPI Credential File")
+@click.option('--spotify-client-id', default=os.environ['SPOTIFY_CLIENT_ID'],
+              help="Default is SPOTIFY_CLIENT_ID env variable")
+@click.option('--spotify-client-secret', default=os.environ['SPOTIFY_CLIENT_SECRET'],
+              help="Default is SPOTIFY_CLIENT_SECRET env variable")
 @click.argument('playlist_id')
-def convert_yt_to_spotify(secret_file, playlist_id):
+def convert_yt_to_spotify(secret_file, playlist_id, spotify_client_id, spotify_client_secret):
+    """
+    Takes a youtube playlist and converts it into a spotify one
+    Make sure to retrieve spotify and youtube data api credentials
+    """
+
     yt_items = get_youtube_playlist_items(secret_file, playlist_id)
 
     spotify_search_queries = []
@@ -64,5 +77,11 @@ def convert_yt_to_spotify(secret_file, playlist_id):
                 title = title.replace(remove_string, "")
             spotify_search_queries.append(f'{title}')
 
-    # if official audio, search query for spotify would be channel name + song name
-    # else use video title with stripped info
+    sp = create_spotify_client.create_spotify_client(spotify_client_id, spotify_client_secret)
+    for query in spotify_search_queries:
+        response = sp.search(query, type="track")
+        try:
+            click.echo(response['tracks']['items'][0]['name'])
+        except IndexError or requests.exceptions.HTTPError:
+            # version, remix
+            click.echo("Track not found for " + query)
