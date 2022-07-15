@@ -2,7 +2,6 @@ import os
 import pprint
 import click
 import pickle
-import requests.exceptions
 from youtube import create_youtube_client
 from spotify import create_spotify_client
 from time import time
@@ -56,7 +55,6 @@ def convert_yt_to_spotify(secret_file, playlist_id, spotify_client_id, spotify_c
     spotify_search_queries = []
 
     # what's regex?
-    # i fucking hate unicode
     remove_strings = ['MV', 'Official Music Video', 'Official Video', 'Official Lyric Video',
                       'Official HD Video', 'Official Audio', 'LyricVideo', 'MusicVideo', 'Audio',
                       'Video', 'HD', 'Original Song', 'HQ',
@@ -79,9 +77,10 @@ def convert_yt_to_spotify(secret_file, playlist_id, spotify_client_id, spotify_c
 
     sp = create_spotify_client.create_spotify_client(spotify_client_id, spotify_client_secret)
     for query in spotify_search_queries:
+        if len(query) > 120: query = query[:50]
         response = sp.search(query, type="track")
         try:
             click.echo(response['tracks']['items'][0]['name'])
-        except IndexError or requests.exceptions.HTTPError:
+        except IndexError:
             # version, remix
             click.echo("Track not found for " + query)

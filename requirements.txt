@@ -23,3 +23,6 @@ six==1.16.0
 -e git+https://github.com/scotus-1/streamdeck-analyzer-moderatorstance.git@5f23a789697bbf6e7a18208f292c9a3f0e854c9e#egg=streamdeck_analyzer_moderatorstance&subdirectory=src
 uritemplate==4.1.1
 urllib3==1.26.10
+
+spotipy~=2.20.0
+setuptools~=57.0.0
