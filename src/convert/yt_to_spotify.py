@@ -1,47 +1,65 @@
-# get youtube playlist items
-# if official audio, search query for spotify would be channel name + song name
-# else use video title with stripped info
-
-# -*- coding: utf-8 -*-
-
-# Sample Python code for youtube.playlistItems.list
-# See instructions for running these code samples locally:
-# https://developers.google.com/explorer-help/code-samples#python
-
 import os
-
+import pprint
+import click
+import pickle
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
 import googleapiclient.errors
+from time import time
 
-scopes = ["https://www.googleapis.com/auth/youtube.readonly"]
 
-
-def main():
-    # Disable OAuthlib's HTTPS verification when running locally.
-    # *DO NOT* leave this option enabled in production.
+def create_youtube_client(secrets_file):
+    scopes = ["https://www.googleapis.com/auth/youtube.readonly"]
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
-    api_service_name = "youtube"
-    api_version = "v3"
-    client_secrets_file = "YOUR_CLIENT_SECRET_FILE.json"
-
     # Get credentials and create an API client
-    flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
-        client_secrets_file, scopes)
-    credentials = flow.run_console()
-    youtube = googleapiclient.discovery.build(
-        api_service_name, api_version, credentials=credentials)
+    flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(secrets_file, scopes)
+    youtube = googleapiclient.discovery.build("youtube", "v3", credentials=flow.run_console())
 
-    request = youtube.playlistItems().list(
+    if not os.path.exists('./.cache'):
+        os.mkdir('./.cache')
+    with open('./.cache/youtubeapiclient.pkl', 'wb') as outp:
+        youtube.timestamp = time()
+        pickle.dump(youtube, outp, pickle.HIGHEST_PROTOCOL)
+
+    return youtube
+
+
+def get_youtube_playlist_items(secrets_file, playlist_id):
+    if os.path.exists("./.cache/youtubeapiclient.pkl"):
+        with open("./.cache/youtubeapiclient.pkl", "rb") as inp:
+            obj = pickle.load(inp)
+            if obj.timestamp + 518400 > time():
+                youtube = obj
+            else: youtube = create_youtube_client(secrets_file)
+    else: youtube = create_youtube_client(secrets_file)
+
+
+    response = youtube.playlistItems().list(
         part="snippet,contentDetails",
-        maxResults=25,
-        playlistId="PLBCF2DAC6FFB574DE"
-    )
-    response = request.execute()
+        maxResults=50,
+        playlistId=playlist_id
+    ).execute()
+    playlistItems = response['items']
 
-    print(response)
+    while response.get('nextPageToken'):
+        response = youtube.playlistItems().list(
+            part="snippet,contentDetails",
+            maxResults=50,
+            playlistId=playlist_id,
+            pageToken=response['nextPageToken']
+        ).execute()
+        playlistItems = response['items'] + playlistItems
+
+    return playlistItems
 
 
-if __name__ == "__main__":
-    main()
+@click.command()
+@click.option('--secret-file', default="client_secret.json", help="Path to GoogleAPI Credential File")
+@click.argument('playlist_id')
+def convert_yt_to_spotify(secret_file, playlist_id):
+    yt_items = get_youtube_playlist_items(secret_file, playlist_id)
+    spotify_search_queries = []
+    print(len(yt_items))
+    # if official audio, search query for spotify would be channel name + song name
+    # else use video title with stripped info
