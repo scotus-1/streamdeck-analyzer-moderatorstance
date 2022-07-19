@@ -5,7 +5,8 @@ import googleapiclient.errors
 import pickle
 from time import time
 
-def create_youtube_client(secrets_file):
+
+def build_youtube_client(secrets_file):
     scopes = ["https://www.googleapis.com/auth/youtube.readonly"]
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
@@ -18,3 +19,15 @@ def create_youtube_client(secrets_file):
         pickle.dump(youtube, outp, pickle.HIGHEST_PROTOCOL)
 
     return youtube
+
+
+def create_youtube_client(secrets_file):
+    if os.path.exists("./youtubeapiclient.pkl"):
+        with open("./youtubeapiclient.pkl", "rb") as inp:
+            obj = pickle.load(inp)
+            if obj.timestamp + 518400 > time():
+                return obj
+            else:
+                return build_youtube_client(secrets_file)
+    else:
+        return build_youtube_client(secrets_file)

@@ -8,16 +8,7 @@ from time import time
 
 
 def get_youtube_playlist_items(secrets_file, playlist_id):
-    if os.path.exists("./youtubeapiclient.pkl"):
-        with open("./youtubeapiclient.pkl", "rb") as inp:
-            obj = pickle.load(inp)
-            if obj.timestamp + 518400 > time():
-                youtube = obj
-            else:
-                youtube = create_youtube_client.create_youtube_client(secrets_file)
-    else:
-        youtube = create_youtube_client.create_youtube_client(secrets_file)
-
+    youtube = create_youtube_client.create_youtube_client(secrets_file)
     response = youtube.playlistItems().list(
         part="snippet,contentDetails",
         maxResults=50,
@@ -38,16 +29,7 @@ def get_youtube_playlist_items(secrets_file, playlist_id):
 
 
 def get_youtube_video(secrets_file, video_id):
-    if os.path.exists("./youtubeapiclient.pkl"):
-        with open("./youtubeapiclient.pkl", "rb") as inp:
-            obj = pickle.load(inp)
-            if obj.timestamp + 518400 > time():
-                youtube = obj
-            else:
-                youtube = create_youtube_client.create_youtube_client(secrets_file)
-    else:
-        youtube = create_youtube_client.create_youtube_client(secrets_file)
-
+    youtube = create_youtube_client.create_youtube_client(secrets_file)
     response = youtube.videos().list(
         part="snippet",
         id=video_id,
