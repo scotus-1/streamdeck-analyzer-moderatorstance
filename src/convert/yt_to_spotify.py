@@ -2,6 +2,7 @@ import os
 import pprint
 import click
 import pickle
+import urllib.parse
 from youtube import create_youtube_client
 from spotify import create_spotify_client
 from time import time
@@ -51,14 +52,16 @@ def convert_yt_to_spotify(secret_file, playlist_id, spotify_client_id, spotify_c
     Make sure to retrieve spotify and youtube data api credentials
     """
 
-    yt_items = reversed(get_youtube_playlist_items(secret_file, playlist_id))
+    yt_items = list(reversed(get_youtube_playlist_items(secret_file, playlist_id)))
     spotify_search_queries = []
 
     # what's regex?
     remove_strings = ['MV', 'Official Music Video', 'Official Video', 'Official Lyric Video',
                       'Official HD Video', 'Official Audio', 'LyricVideo', 'MusicVideo', 'Audio',
                       'Video', 'HD', 'Original Song', 'HQ', 'Color Coded',
-                      '()', '[]', '【 】', '（）', '( )', '[ ]', '【  】', '（ ）', 'From', 'Lyrics', '|']
+                      '()', '[]', '【 】', '（）', '( )', '[ ]', '【  】', '（ ）', 'From', 'Lyrics', '|'
+                                                                                              '「 ', '」', '『 ', '』', '【',
+                      '】']
     remove_strings = remove_strings + [remove_string.upper() for remove_string in remove_strings]
 
     for yt_item in yt_items:
@@ -81,13 +84,106 @@ def convert_yt_to_spotify(secret_file, playlist_id, spotify_client_id, spotify_c
             spotify_search_queries.append(f'{title}')
 
     sp = create_spotify_client.create_spotify_client(spotify_client_id, spotify_client_secret)
+    songs = []
+    flagged_songs = []
+    not_found_songs = []
+    flag_strings = ['version', 'remix', 'instrumental', 'ver.']
+    flag_strings = flag_strings + [flag_string.upper() for flag_string in flag_strings]
+    flag_strings = flag_strings + [flag_string.capitalize() for flag_string in flag_strings]
     for index, query in enumerate(spotify_search_queries):
         if len(query) > 120: query = query[:69]
-        response = sp.search(query, type="track")
+        response = sp.search(query, type="track", limit=9)
         try:
             song = response['tracks']['items'][0]
+            song['query'] = query
+            song['other_results'] = response['tracks']['items']
+            song['youtube_id'] = yt_items[index]['snippet']['resourceId']['videoId']
+            songs.append(song)
             click.echo(
                 f"{index + 1}/{len(spotify_search_queries)} {song['name']} - {song['artists'][0]['name']}               ====              {query}")
+            for flag_string in flag_strings:
+                if flag_string in song['name']:
+                    flagged_songs.append(song)
+                    break
+
         except IndexError:
-            # version, remix
             click.echo("     Track not found for " + query)
+            not_found_songs.append(
+                {
+                    "query": query,
+                    "youtube_id": yt_items[index]['snippet']['resourceId']['videoId']
+                }
+            )
+
+    click.echo("===================================================================")
+    click.echo(f"Found {len(songs)}/{len(spotify_search_queries)}")
+    click.echo(f"Flagged {len(flagged_songs)} songs\n")
+    not_added_songs = []
+
+    for flagged_song in flagged_songs:
+        click.echo(
+            f"Flagged '{flagged_song['name']} - {flagged_song['artists'][0]['name']}' at index {songs.index(flagged_song)}     -----    {flagged_song['query']}")
+        if click.confirm("Would you like to review more options for this song?", default=True):
+            searched_songs = flagged_song['other_results']
+            for index, searched_song in enumerate(searched_songs):
+                if index == 0:
+                    click.echo(f"[0] Skip/Keep song")
+                else:
+                    click.echo(
+                        f"[{index}] {searched_song['name']} - {searched_song['artists'][0]['name']} - {searched_song['album']['name']}")
+
+            click.echo(f"[{len(searched_songs)}] Queue song for deletion if no results match")
+            option = click.prompt("Input option number", type=int, default=0)
+
+            if option == len(searched_songs):
+                not_added_songs.append(flagged_song)
+            else:
+                i = songs.index(flagged_song)
+                chosen_song = searched_songs[option]
+                songs = songs[:i] + [chosen_song] + songs[i + 1:]
+            click.echo("\n")
+
+    click.echo("\n")
+    for not_added_song in not_added_songs:
+        click.echo(
+            f"Removed: {not_added_song['name']} - {not_added_song['artists'][0]['name']} - https://youtu.be/{not_added_song['youtube_id']}")
+        if click.confirm("Would you like to search for more results for this song?", default=True):
+            query = click.prompt(
+                "Input your manuel search query here (Try either a simpler query or a different version)", type=str)
+            searched_songs = sp.search(query, type="track", limit=10)['tracks']['items']
+
+            for index, searched_song in enumerate(searched_songs):
+                click.echo(
+                    f"[{index}] {searched_song['name']} - {searched_song['artists'][0]['name']} - {searched_song['album']['name']}")
+
+            click.echo(f"[{len(searched_songs)}] Delete song and log")
+            option = click.prompt("Input option number", type=int, default=0)
+
+            if option == len(searched_songs):
+                songs.remove(not_added_song)
+            else:
+                i = songs.index(not_added_song)
+                chosen_song = searched_songs[option]
+                songs = songs[:i] + [chosen_song] + songs[i + 1:]
+                not_added_songs.remove(not_added_song)
+            click.echo("\n")
+
+    for not_found_song in not_found_songs:
+        click.echo(
+            f"Did not find: {not_found_song['query']} - https://youtu.be/{urllib.parse.quote(not_found_song['youtube_id'])}")
+        if click.confirm("Would you like to search for this song?", default=True):
+            query = click.prompt(
+                "Input your manuel search query here (Try either a simpler query or a different version)", type=str)
+            searched_songs = sp.search(query, type="track", limit=10)['tracks']['items']
+
+            for index, searched_song in enumerate(searched_songs):
+                click.echo(
+                    f"[{index}] {searched_song['name']} - {searched_song['artists'][0]['name']} - {searched_song['album']['name']}")
+
+            click.echo(f"[{len(searched_songs)}] Completely Ignore and log")
+            option = click.prompt("Input option number", type=int, default=0)
+
+            if not option == len(searched_songs):
+                songs.append(searched_songs[option])
+
+            click.echo("\n")

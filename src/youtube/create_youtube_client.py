@@ -14,7 +14,7 @@ def build_youtube_client(secrets_file):
     flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(secrets_file, scopes)
     youtube = googleapiclient.discovery.build("youtube", "v3", credentials=flow.run_console())
 
-    with open('./youtubeapiclient.pkl', 'wb') as outp:
+    with open('./.youtubeapiclient.pkl', 'wb') as outp:
         youtube.timestamp = time()
         pickle.dump(youtube, outp, pickle.HIGHEST_PROTOCOL)
 
@@ -22,8 +22,8 @@ def build_youtube_client(secrets_file):
 
 
 def create_youtube_client(secrets_file):
-    if os.path.exists("./youtubeapiclient.pkl"):
-        with open("./youtubeapiclient.pkl", "rb") as inp:
+    if os.path.exists("./.youtubeapiclient.pkl"):
+        with open("./.youtubeapiclient.pkl", "rb") as inp:
             obj = pickle.load(inp)
             if obj.timestamp + 518400 > time():
                 return obj
