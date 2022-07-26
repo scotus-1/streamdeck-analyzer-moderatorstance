@@ -5,7 +5,6 @@ import pickle
 import urllib.parse
 from youtube import create_youtube_client
 from spotify import create_spotify_client
-from time import time
 
 
 def get_youtube_playlist_items(secrets_file, playlist_id):
@@ -98,8 +97,8 @@ def convert_yt_to_spotify(secret_file, playlist_id, spotify_client_id, spotify_c
     flagged_songs = []
     not_found_songs = []
     flag_strings = ['version', 'remix', 'instrumental', 'ver.']
-    flag_strings = flag_strings + [flag_string.upper() for flag_string in flag_strings]
-    flag_strings = flag_strings + [flag_string.capitalize() for flag_string in flag_strings]
+    flag_strings += [flag_string.upper() for flag_string in flag_strings]
+    flag_strings += [flag_string.capitalize() for flag_string in flag_strings]
     with click.progressbar(length=len(spotify_search_queries), label="Searching on Spotify",
                            item_show_func=lambda q: q) as bar:
         for index, query in enumerate(spotify_search_queries):
