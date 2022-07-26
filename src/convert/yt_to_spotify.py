@@ -71,7 +71,7 @@ def convert_yt_to_spotify(secret_file, playlist_id, spotify_client_id, spotify_c
                       '()', '[]', '【 】', '（）', '( )', '[ ]', '【  】', '（ ）', 'From', 'Lyrics', '|'
                                                                                               '「 ', '」', '『 ', '』', '【',
                       '】']
-    remove_strings = remove_strings + [remove_string.upper() for remove_string in remove_strings]
+    remove_strings += [remove_string.upper() for remove_string in remove_strings]
 
     for yt_item in yt_items:
         description = yt_item['snippet']['description']
