@@ -1,7 +1,7 @@
 import click
 import os
 from json import dump
-from spotify import create_spotify_client
+from src.spotify import create_spotify_client
 
 
 @click.command()

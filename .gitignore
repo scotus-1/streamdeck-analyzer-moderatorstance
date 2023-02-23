@@ -142,3 +142,5 @@ cython_debug/
 client_secret.json
 *.pkl
 *tracks.json
+*.htm
+*.html

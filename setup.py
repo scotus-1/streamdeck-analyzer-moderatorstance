@@ -9,7 +9,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'analyzer = main:cli',
+            'analyzer = src.main:cli',
         ],
     },
 )

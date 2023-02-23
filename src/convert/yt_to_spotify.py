@@ -3,8 +3,8 @@ import pprint
 import click
 import pickle
 import urllib.parse
-from youtube import create_youtube_client
-from spotify import create_spotify_client
+from src.youtube import create_youtube_client
+from src.spotify import create_spotify_client
 
 
 def get_youtube_playlist_items(secrets_file, playlist_id):

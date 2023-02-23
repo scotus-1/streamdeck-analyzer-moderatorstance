@@ -1,1 +1,1 @@
-__all__ = ["yt_to_spotify"]
+__all__ = ["yt_to_spotify", "apmusic_to_spotify"]
