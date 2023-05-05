@@ -143,17 +143,18 @@ def convert_ap_to_spotify(html_file, spotify_client_id, spotify_client_secret):
             click.clear()
             current_selection = songs[current_song_index - selection_amount:current_song_index + selection_amount + 1]
             for index, song in enumerate(current_selection):
+                song_index = current_song_index - selection_amount + index
                 if index < selection_amount or index > selection_amount:
                     click.echo(
-                        f"{songs.index(song) + 1}/{len(songs)} {song['name']} - {song['artists'][0]['name']}               ====              {song['query']}")
+                        f"{song_index + 1}/{len(songs)} {song['name']} - {song['artists'][0]['name']}               ====              {song['query']}")
                 else:
                     click.echo(
-                        f"\n ======= {songs.index(song) + 1}/{len(songs)} {song['name']} - {song['artists'][0]['name']}               ====              {song['query']}\n")
+                        f"\n ======= {song_index + 1}/{len(songs)} {song['name']} - {song['artists'][0]['name']}               ====              {song['query']}\n")
 
             click.echo("\nControls: h for up, j or ENTER for down, m for more options")
             song = songs[current_song_index]
             user_input = click.prompt(
-                f"\n{songs.index(song) + 1}/{len(songs)} {song['name']} | {song['artists'][0]['name']} | {song['album']['name']} - review?",
+                f"\n{current_song_index + 1}/{len(songs)} {song['name']} | {song['artists'][0]['name']} | {song['album']['name']} - review?",
                 default='j', type=click.Choice(['h', 'j', 'm'], case_sensitive=False), show_choices=True)
             if user_input == "m":
                 query = click.prompt(
